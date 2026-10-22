@@ -1,0 +1,65 @@
+name: social-share-tracker
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: share-tracker-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Kuala_Lumpur}
+      APP_IP_SALT: ${APP_IP_SALT:-docker-local-salt-change-me}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: social_share_tracker
+      DB_USER: ${DB_USER:-share_app}
+      DB_PASS: ${DB_PASS:-share_pass}
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    container_name: share-tracker-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-root_pass}
+      MYSQL_DATABASE: social_share_tracker
+      MYSQL_USER: ${DB_USER:-share_app}
+      MYSQL_PASSWORD: ${DB_PASS:-share_pass}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", 'mysql -h 127.0.0.1 -u root -p"$${MYSQL_ROOT_PASSWORD}" -e "SELECT 1 FROM social_share_tracker.platforms LIMIT 1" >/dev/null 2>&1']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    # Uncomment to connect from a desktop DB client on the host:
+    # ports:
+    #   - "127.0.0.1:3307:3306"
+
+  phpmyadmin:
+    image: phpmyadmin:5
+    container_name: share-tracker-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "${PMA_PORT:-8081}:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 64M
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
