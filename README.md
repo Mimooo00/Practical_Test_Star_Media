@@ -4,9 +4,11 @@ A task-focused PHP 8 + MySQL demo. It has a small public website with five socia
 
 The project does **not** require XAMPP. Docker Desktop is the recommended setup on Windows and macOS; native Windows/macOS stacks are documented below as alternatives.
 
+Default admin login for every setup: **admin / admin123** at `/admin/`. Change it after the first login.
+
 ## Quick start with Docker (recommended)
 
-**Prerequisites:** Docker Desktop for Windows (WSL2 backend) or macOS. No PHP, Apache, or MySQL installation is required on the host.
+**Prerequisites:** Docker Desktop for Windows (WSL2 backend) or macOS. No PHP, Apache, or MySQL installation is required on the host. The first start pulls images, and the site loads Tailwind/Chart.js from CDNs, so internet access is required.
 
 1. Clone the repository and open a terminal in the project folder:
 
@@ -84,7 +86,23 @@ Use Laragon, WAMP, or an existing XAMPP installation.
      For Laragon, use its terminal's `mysql -u root < database\schema.sql`, or import through phpMyAdmin.
 4. Make sure Apache allows `.htaccess` overrides (`AllowOverride All`). Laragon, WAMP, and a standard XAMPP install do this by default for the web root.
 5. Set `APP_URL` in `config/config.php` to the address you use, for example `http://localhost/Practical_Test_Star_Media`. If your MySQL root account has a password, update the DB settings in the same file or set the `DB_*` environment variables.
-6. Open the site and admin URLs shown by your stack.
+6. Open:
+   - Site: `http://localhost/Practical_Test_Star_Media/`
+   - Admin: `http://localhost/Practical_Test_Star_Media/admin/`
+
+   Sign in with `admin / admin123`. Change the password from the project folder:
+
+   ```powershell
+   php scripts/set_admin_password.php admin "YourStrongPassword123"
+   ```
+
+   If `php` is not on your PATH (common with XAMPP), use:
+
+   ```powershell
+   C:\xampp\php\php.exe scripts\set_admin_password.php admin "YourStrongPassword123"
+   ```
+
+   If you use Laragon/WAMP with a different host or port, open the URL shown by that stack instead and update `APP_URL` to match it.
 
 ### If XAMPP is installed but the Control Panel is missing
 
@@ -113,7 +131,18 @@ Use MAMP (Apache + MySQL), or use Docker Desktop as above.
    - Apache default: `http://localhost:8888`
    - MySQL default: `3306` on some builds, `8889` on the standard MAMP configuration
    - MAMP MySQL credentials are often `root` / `root`
-5. Ensure Apache allows `.htaccess` overrides, then open the configured site URL.
+5. Ensure Apache allows `.htaccess` overrides, then open the site URL that matches your document root:
+   - `http://localhost:8888/` if the project root is the MAMP document root
+   - `http://localhost:8888/Practical_Test_Star_Media/` if it is inside MAMP's `htdocs`
+   - Admin: append `/admin/` to the site URL
+
+   Sign in with `admin / admin123`. Change the password from the project folder:
+
+   ```bash
+   php scripts/set_admin_password.php admin "YourStrongPassword123"
+   ```
+
+   If `php` is not on your PATH, use the PHP binary from your MAMP installation.
 
 If the ports or credentials differ, adjust `APP_URL`, `DB_PORT`, `DB_USER`, and `DB_PASS` in `config/config.php` (or set them as environment variables).
 
@@ -199,6 +228,14 @@ page.php                  ?slug=... sample page renderer (404 for unknown slugs)
 4. The API validates the payload, checks the request origin, applies rate/duplicate limits, and inserts a row into `share_clicks`.
 5. The dashboard aggregates `share_clicks` joined to `platforms`, so filtering and charts stay dynamic.
 
+## Test the flow
+
+1. Open the home page, then open **Sample Page One**.
+2. Click any of the five share buttons.
+3. Sign in to the admin dashboard at `/admin/`.
+4. Filter by the page or platform and confirm the new click appears in the table and charts.
+5. Use **Export CSV** to download the filtered clicks.
+
 ## Adding another social platform
 
 No code changes are required:
@@ -232,6 +269,7 @@ Supported tokens: `{url}`, `{title}`, `{description}`. Platforms with an empty t
 
 - **Port 8080 or 8081 already in use** — change `APP_PORT` / `PMA_PORT` in `.env`, update `APP_URL` to match the new app port, then run `docker compose up -d`.
 - **Database changes are not appearing** — the schema is only imported when the database volume is first created. Run `docker compose down -v` and start again. Changing `DB_USER` or `DB_PASS` after the first start also requires recreating the volume or updating the MySQL user manually.
+- **Docker starts but the site errors** — check `docker compose logs app` and `docker compose logs db`. A failed first-time schema import usually shows up in the database log; fix the cause and run `docker compose down -v` before starting again.
 - **Tracking returns 403 or 422** — `APP_URL` does not match the browser address (including the port), or the database is not reachable.
 - **Docker daemon not running** — start Docker Desktop and wait for it to report that it is running.
 - **Native MySQL access denied** — update `DB_USER`/`DB_PASS`, and `DB_PORT` for MAMP.
